@@ -40,22 +40,21 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Repository') {
+       stage('Push to Docker Repository') {
             steps {
                 echo 'Logging securely into Docker Hub using stdin...'
-                // withCredentials safely grabs your password and username without exposing them in logs
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                     script {
-                        # 1. Log in securely using stdin piping
+                        // 1. Log in securely using stdin piping
                         sh "echo \$PASS | docker login -u \$USER --password-stdin"
                         
-                        # 2. Push your tagged images
+                        // 2. Push your tagged images
                         sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
                         sh "docker push ${DOCKER_REPO}:latest"
                     }
                 }
             }
-}
+        }
 
         stage('Clean Up') {
             steps {
