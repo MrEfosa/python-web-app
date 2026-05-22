@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         // Your Docker Hub profile and target repository
-        DOCKER_REPO = 'sirdavidchristian/django-app'
+        DOCKER_REPO = 'sirdavidchris/django-app'
         
         // This MUST match the ID name you type when adding credentials in Jenkins
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials' 
