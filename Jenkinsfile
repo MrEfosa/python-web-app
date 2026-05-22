@@ -50,7 +50,6 @@ pipeline {
                         
                         // 2. Push your tagged images
                         sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
-                        sh "docker push ${DOCKER_REPO}:latest"
                     }
                 }
             }
