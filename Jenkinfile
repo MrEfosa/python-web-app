@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Replace with your Docker Hub username and repository name
+        DOCKER_REPO = 'sirdavidchristian/django-app'
+        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials' // ID set in Jenkins
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
+    
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // Jenkins usually does this automatically if configured via SCM,
+                // but explicitly checking out ensures code availability.
+                checkout scm
+            }
+        }
+
+        stage('Code Linting / Static Analysis') {
+            steps {
+                echo 'Running python syntax checks...'
+                // Optional: You can run flake8 or black here if installed
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image: ${DOCKER_REPO}:${IMAGE_TAG}..."
+                script {
+                    // Builds the image using the Dockerfile in the workspace root
+                    sh "docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
+                    // Also tag it as 'latest' for convenience
+                    sh "docker build -t ${DOCKER_REPO}:latest ."
+                }
+            }
+        }
+
+        stage('Push to Docker Repository') {
+            steps {
+                echo 'Logging into Docker Hub and pushing image...'
+                // withDockerRegistry handles secure authentication using your Jenkins credentials store
+                withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS_ID}", url: '']) {
+                    sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
+                    sh "docker push ${DOCKER_REPO}:latest"
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                echo 'Cleaning up local images to save disk space...'
+                sh "docker rmi ${DOCKER_REPO}:${IMAGE_TAG}"
+                sh "docker rmi ${DOCKER_REPO}:latest"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully! Image pushed to ${DOCKER_REPO}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "Pipeline failed. Check build steps above for details."
+        }
+    }
+}
