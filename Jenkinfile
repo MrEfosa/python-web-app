@@ -2,44 +2,48 @@ pipeline {
     agent any
     
     environment {
-        // Replace with your Docker Hub username and repository name
+        // Your Docker Hub profile and target repository
         DOCKER_REPO = 'sirdavidchristian/django-app'
-        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials' // ID set in Jenkins
+        
+        // This MUST match the ID name you type when adding credentials in Jenkins
+        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials' 
+        
+        // Parameter that automatically assigns the current Jenkins build number as the image tag
         IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
     
     stages {
         stage('Clone Repository') {
             steps {
-                // Jenkins usually does this automatically if configured via SCM,
-                // but explicitly checking out ensures code availability.
+                echo 'Pulling fresh code from GitHub SCM...'
                 checkout scm
             }
         }
 
         stage('Code Linting / Static Analysis') {
             steps {
-                echo 'Running python syntax checks...'
-                // Optional: You can run flake8 or black here if installed
+                echo 'Running python syntax validation checks...'
+                // Optional step for code quality: e.g., sh 'flake8 .'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image: ${DOCKER_REPO}:${IMAGE_TAG}..."
+                echo "Compiling Docker layers for ${DOCKER_REPO}:${IMAGE_TAG}..."
                 script {
-                    // Builds the image using the Dockerfile in the workspace root
+                    // Builds the image using the root Dockerfile context
                     sh "docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
-                    // Also tag it as 'latest' for convenience
-                    sh "docker build -t ${DOCKER_REPO}:latest ."
+                    
+                    // Tags an alias 'latest' version from the compiled layers
+                    sh "docker tag ${DOCKER_REPO}:${IMAGE_TAG} ${DOCKER_REPO}:latest"
                 }
             }
         }
 
         stage('Push to Docker Repository') {
             steps {
-                echo 'Logging into Docker Hub and pushing image...'
-                // withDockerRegistry handles secure authentication using your Jenkins credentials store
+                echo 'Initiating secure handshake and pushing to Docker Hub...'
+                // withDockerRegistry securely injects your matching Jenkins secret credentials
                 withDockerRegistry([credentialsId: "${DOCKER_CREDENTIALS_ID}", url: '']) {
                     sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
                     sh "docker push ${DOCKER_REPO}:latest"
@@ -49,7 +53,7 @@ pipeline {
 
         stage('Clean Up') {
             steps {
-                echo 'Cleaning up local images to save disk space...'
+                echo 'Purging temporary local build images to free up disk space...'
                 sh "docker rmi ${DOCKER_REPO}:${IMAGE_TAG}"
                 sh "docker rmi ${DOCKER_REPO}:latest"
             }
@@ -58,10 +62,13 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed successfully! Image pushed to ${DOCKER_REPO}:${IMAGE_TAG}"
+            echo "=========================================================================="
+            echo " Success! Continuous Integration complete. Your image is live."
+            echo " Repository: https://hub.docker.com/r/${DOCKER_REPO}"
+            echo "=========================================================================="
         }
         failure {
-            echo "Pipeline failed. Check build steps above for details."
+            echo " Pipeline failed. Please inspect individual stage logs above for errors."
         }
     }
 }
