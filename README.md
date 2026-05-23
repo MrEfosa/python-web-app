@@ -4,7 +4,7 @@ An enterprise-grade, fully automated DevOps pipeline designed to build, optimize
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The automation workflow runs seamlessly across decoupled environments:
 
@@ -16,7 +16,7 @@ The automation workflow runs seamlessly across decoupled environments:
 
 ---
 
-## 🛠️ Tech Stack & Tools
+## Tech Stack & Tools
 
 * **Application Framework:** Python / Django
 * **CI/CD Automation:** Jenkins (Declarative Pipelines)
@@ -26,7 +26,7 @@ The automation workflow runs seamlessly across decoupled environments:
 
 ---
 
-## ⚙️ Automated Host Provisioning
+## Automated Host Provisioning
 
 The automation controller environment is provisioned deterministically utilizing a dedicated bash initialization script (`setup-jenkins.sh`). This completely eliminates configuration drift and ensures reproducible server setup environments across the development pipeline.
 
@@ -36,7 +36,6 @@ The infrastructure configuration script automates the following systems engineer
 * **Volume Persistence Orchestration:** Configures localized root tracking paths and structures a persistent configuration mapping for the automation engine.
 * **Daemon Level Inter-process Communication:** Mounts the host's UNIX socket `/var/run/docker.sock` straight into the isolated Jenkins container matrix. This Docker-out-of-Docker (DooD) architecture grants Jenkins the capability to spin up sibling application containers natively on the host platform without running nested container architectures.
 * **Dynamic Pipeline Core Execution:** Executes a root-level inline container patch directly inside the active Jenkins runtime instance, embedding execution dependencies inside the continuous integration pipeline environment.
-* 
 ---
 
 ## Pipeline Stages & Implementation Details
@@ -81,6 +80,7 @@ Once the pipeline run completes with a successful green status, you can view the
 
 ```text
 http://<YOUR_AWS_EC2_PUBLIC_IP>
+```
 
 ## Author's Note
 Developed as a practical demonstration of cloud automation, continuous deployment best practices, and secure infrastructure management. Feel free to explore the Jenkinsfile and Dockerfile architectures included in this repository!
