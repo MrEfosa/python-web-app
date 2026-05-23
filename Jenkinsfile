@@ -55,6 +55,34 @@ pipeline {
             }
         }
 
+        stage("Deploy to aws-ec2-instance") {
+            steps {
+                echo "Deploying image to AWS EC2 instance..."
+
+                sshagent(['aws-ec2-instance']) {
+                    script {
+                        def EC2_IP = "54.165.131.131"
+
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ec2-user@${EC2_IP} '
+                                docker stop django-app || true
+                                docker rm django-app || true
+
+                                docker pull ${DOCKER_REPO}:${IMAGE_TAG}
+
+                                docker run -d \
+                                    --name django-app\
+                                    --restart unless-stopped \
+                                    -p 80:8000 \
+                                    ${DOCKER_REPO}:${IMAGE_TAG}
+
+                                docker image prune -f
+                            '
+                        """
+                    }
+                }
+            }
+}
         stage('Clean Up') {
             steps {
                 echo 'Purging temporary local build images to free up disk space...'
