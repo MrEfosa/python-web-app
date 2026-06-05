@@ -24,13 +24,15 @@ echo "========================================="
 apt install -y docker-compose-v2
 
 echo "========================================="
-echo "Setting Up Jenkins Directory..."
+echo "Setting Up Production Jenkins Directories..."
 echo "========================================="
+# Best Practice: Define an explicit, standard host directory for data persistence
+mkdir -p /var/jenkins_home
 mkdir -p /root/jenkins
 cd /root/jenkins
 
 echo "========================================="
-echo "Creating docker-compose.yml..."
+echo "Creating Production-Ready docker-compose.yml..."
 echo "========================================="
 cat > docker-compose.yml <<EOF
 services:
@@ -42,19 +44,24 @@ services:
       - "8080:8080"
       - "50000:50000"
     volumes:
-      - jenkins_home:/var/jenkins_home
+      - /var/jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
     user: root
-
-volumes:
-  jenkins_home:
 EOF
 
 echo "========================================="
 echo "Launching Jenkins Container..."
 echo "========================================="
 docker compose up -d
+
+# Giving Jenkins a brief moment to unpack its file structures before modification
+sleep 5
+
+echo "========================================="
+echo "Provisioning Docker CLI inside Jenkins..."
+echo "========================================="
 docker exec -u 0 -it jenkins bash -c "apt update && apt install -y docker.io"
+
 echo "========================================="
 echo "Deployment Initialization Complete!"
 echo "========================================="
