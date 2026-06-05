@@ -24,7 +24,7 @@ echo "========================================="
 apt install -y docker-compose-v2
 
 echo "========================================="
-echo "Setting Up Production Jenkins Directories..."
+echo "Setting Up Jenkins Directories..."
 echo "========================================="
 # Best Practice: Define an explicit, standard host directory for data persistence
 mkdir -p /var/jenkins_home
@@ -32,7 +32,14 @@ mkdir -p /root/jenkins
 cd /root/jenkins
 
 echo "========================================="
-echo "Creating Production-Ready docker-compose.yml..."
+echo "Detecting Host Docker Group ID..."
+echo "========================================="
+# Detect the host's docker GID dynamically and save it to a variable
+DOCKER_GID=$(getent group docker | cut -d: -f3)
+echo "Detected Docker GID: $DOCKER_GID"
+
+echo "========================================="
+echo "Creating docker-compose.yml..."
 echo "========================================="
 cat > docker-compose.yml <<EOF
 services:
@@ -46,7 +53,8 @@ services:
     volumes:
       - /var/jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-    user: root
+    # Secure: Runs as non-root user (1000), but adds them to the host docker group
+    user: "1000:$DOCKER_GID"
 EOF
 
 echo "========================================="

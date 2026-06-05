@@ -1,56 +1,50 @@
 pipeline {
-    agent any
+    agent none // Do not run anything on the global host machine
     
     environment {
-        // Your Docker Hub profile and target repository
-        DOCKER_REPO = 'sirdavidchris/django-app'
-        
-        // This MUST match the ID name you type when adding credentials in Jenkins
+        DOCKER_REPO           = 'sirdavidchris/django-app'
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials' 
-        
-        // Parameter that automatically assigns the current Jenkins build number as the image tag
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG             = "${env.BUILD_NUMBER}"
     }
     
     stages {
-        stage('Clone Repository') {
+        stage('Code Linting & Security') {
+            agent { 
+                docker { image 'python:3.11-slim' } 
+            }
             steps {
-                echo 'Pulling fresh code from GitHub SCM...'
-                checkout scm
+                echo 'Running linting inside an isolated Python environment...'
+                sh 'pip install --no-cache-dir flake8 && flake8 .'
             }
         }
 
-        stage('Code Linting / Static Analysis') {
+        stage('Vulnerability Scan') {
+            agent { 
+                docker { image 'aquasec/trivy:latest' } 
+            }
             steps {
-                echo 'Running python syntax validation checks...'
-                // Optional step for code quality: e.g., sh 'flake8 .'
+                echo 'Scanning project files for known vulnerabilities...'
+                sh 'trivy fs .'
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                echo "Compiling Docker layers for ${DOCKER_REPO}:${IMAGE_TAG}..."
-                script {
-                    // Builds the image using the root Dockerfile context
-                    sh "docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
-                    
-                    // Tags an alias 'latest' version from the compiled layers
-                    sh "docker tag ${DOCKER_REPO}:${IMAGE_TAG} ${DOCKER_REPO}:latest"
-                }
+        stage('Build & Push Image') {
+            agent { 
+                docker { 
+                    image 'docker:stable'
+                    // We pass the socket into this specific container so it can build images
+                    args '-v /var/run/docker.sock:/var/run/docker.sock' 
+                } 
             }
-        }
-
-       stage('Push to Docker Repository') {
             steps {
-                echo 'Logging securely into Docker Hub using stdin...'
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                    script {
-                        // 1. Log in securely using stdin piping
-                        sh "echo \$PASS | docker login -u \$USER --password-stdin"
-                        
-                        // 2. Push your tagged images
-                        sh "docker push ${DOCKER_REPO}:${IMAGE_TAG}"
-                    }
+                echo "Compiling and pushing Docker layers using an isolated Docker CLI agent..."
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                    sh """
+                        docker build -t ${DOCKER_REPO}:${IMAGE_TAG} -t ${DOCKER_REPO}:latest .
+                        echo "\$PASS" | docker login -u "\$USER" --password-stdin
+                        docker push ${DOCKER_REPO}:${IMAGE_TAG}
+                        docker push ${DOCKER_REPO}:latest
+                    """
                 }
             }
         }
