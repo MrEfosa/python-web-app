@@ -82,5 +82,5 @@ Once the pipeline run completes with a successful green status, you can view the
 http://<YOUR_AWS_EC2_PUBLIC_IP>
 ```
 
-## Author's Note
+## Note
 Developed as a practical demonstration of cloud automation, continuous deployment best practices, and secure infrastructure management. Feel free to explore the Jenkinsfile and Dockerfile architectures included in this repository!
